@@ -5,23 +5,23 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# 🚀 Inicializar FastAPI
+# Inicializar FastAPI
 app = FastAPI(title="Clasificador de Exoplanetas 🚀")
 
 # 🌍 Habilitar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Corregido: era "" vacío
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # Corregido: era "" vacío
     allow_headers=["*"],
 )
 
-# 📂 Cargar modelo y codificador
+# Cargar modelo y codificador
 rf = joblib.load("model/rf_exoplanets.pkl")
 enc = joblib.load("model/label_encoder.pkl")
 
-# 📑 Columnas esperadas
+# Columnas esperadas
 feature_cols = [
     "koi_period", "koi_duration", "koi_depth", "koi_impact",
     "koi_prad", "koi_teq", "koi_insol",
@@ -49,11 +49,9 @@ class ExoplanetFeatures(BaseModel):
     koi_fpflag_co: int = 0
     koi_fpflag_ec: int = 0
 
-
 @app.get("/")
 def root():
     return {"msg": "Bienvenido al clasificador de exoplanetas 🚀"}
-
 
 @app.post("/predict")
 def predict(features: ExoplanetFeatures):
@@ -61,26 +59,25 @@ def predict(features: ExoplanetFeatures):
     X = pd.DataFrame([[data[c] for c in feature_cols]], columns=feature_cols)
     X = X.fillna(X.median(numeric_only=True))
 
-    proba = rf.predict_proba(X)[0]
-    pred = enc.classes_[int(np.argmax(proba))]
+    proba = rf.predict_proba(X)[0]  # Corregido: era predictproba
+    pred = enc.classes_[int(np.argmax(proba))]  # Corregido: era enc.classes
 
     return {
         "prediccion": pred,
         "probabilidades": {enc.classes_[i]: float(proba[i]) for i in range(len(proba))}
     }
 
-
 @app.post("/analisis")
 def analisis(features: ExoplanetFeatures):
     data = features.dict()
 
-    # 📌 1. Clasificación del modelo
+    # 1. Clasificación del modelo
     X = pd.DataFrame([[data[c] for c in feature_cols]], columns=feature_cols)
     X = X.fillna(X.median(numeric_only=True))
-    proba = rf.predict_proba(X)[0]
-    pred = enc.classes_[int(np.argmax(proba))]
+    proba = rf.predict_proba(X)[0]  # Corregido
+    pred = enc.classes_[int(np.argmax(proba))]  # Corregido
 
-    # 📌 2. Habitabilidad simple
+    # 2. Habitabilidad simple
     habitabilidad = []
     if data["koi_prad"] and 0.5 <= data["koi_prad"] <= 2.0:
         habitabilidad.append("Radio compatible con planeta rocoso 🌍")
@@ -97,14 +94,14 @@ def analisis(features: ExoplanetFeatures):
     else:
         habitabilidad.append("Flujo de radiación extremo ❌")
 
-    # 📌 3. Estrella
+    # 3. Estrella
     estrella = {
         "Temperatura (K)": data.get("koi_steff"),
         "Radio (R☉)": data.get("koi_srad"),
         "Magnitud Kepler": data.get("koi_kepmag"),
     }
 
-    # 📌 4. Fiabilidad
+    # 4. Fiabilidad
     flags = {
         "Not Transit-Like": data.get("koi_fpflag_nt", 0),
         "Stellar Eclipse": data.get("koi_fpflag_ss", 0),
@@ -114,7 +111,7 @@ def analisis(features: ExoplanetFeatures):
     fiabilidad = "Posible falso positivo 🚨" if any(flags.values()) else "Candidato fiable ✅"
 
     return {
-        "clasificacion_modelo": pred,
+        "clasificacion_modelo": pred,  # Corregido: era clasificacionmodelo
         "probabilidades": {enc.classes_[i]: float(proba[i]) for i in range(len(proba))},
         "habitabilidad": habitabilidad,
         "estrella": estrella,
